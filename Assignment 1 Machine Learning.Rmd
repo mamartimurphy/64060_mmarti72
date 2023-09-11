@@ -1,0 +1,25 @@
+---
+title: "Assignment 1"
+author: "Marella Murphy"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+This is my submission for Assignment 1 - Machine Learning, Fall 2023.
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ISLR) ##Comment: Pulling an exsisting dataset from the R library.
+summary(Credit) ##Comment: Summary view to understand data set.
+nrow(Credit) ##Comment: viewing total entries.
+colMeans(is.na(Credit)) ##Comment: investigating if there are any missing values to transform, there are none. 
+Credit[Credit$Rating>800, ] ##Comment: Transforming the data to view rows with a Rating over 800.
+plot(Credit$Rating,Credit$Age) ##Comment: Plot age and rating, not correlated and I'm suprised by that!
+barplot(Credit$Limit,Credit$Education) ##Comment: Chart the credit limit against education level.
+```
+
