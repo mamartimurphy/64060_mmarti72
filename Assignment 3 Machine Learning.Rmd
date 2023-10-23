@@ -1,0 +1,56 @@
+---
+title: "Assignment 3"
+author: "Marella (Martin) Murphy"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+dir.create("images")
+```
+
+```{r}
+library(caret)
+library(ISLR)
+library(e1071)
+summary(UniversalBank)
+```
+
+```{r}
+read.csv("UniversalBank.csv", header = TRUE) #load data
+
+
+```
+
+
+
+```{r}
+UniversalBank.df<-UniversalBankv2
+set.seed(123)
+Index_Train<-createDataPartition(UniversalBank.df$Personal.Loan, p=0.6, list=FALSE)
+Train <-UniversalBank.df[Index_Train,]
+Test <-UniversalBank.df[-Index_Train,]
+
+summary(Index_Train)
+
+```
+
+```{r}
+# I attempted to make pivot tables using all suggested methods in the assignment and it was unable to do it successfully, therefore, I created two separate tables to view the results because I felt comfortable with the accuracy. 
+
+table(UniversalBank$Online,UniversalBank$"Personal Loan")
+table(UniversalBank$CreditCard,UniversalBank$`Personal Loan`)
+
+
+
+```
+
+
+```{r}
+## I tried many different iterations of this formula, with no success. I checked the online resources, book, and my hard copy book to try to figure it out but I am not able at this time. These are the different formulas I tried
+## nb_model <-naiveBayes(UniversalBank.df ~ ., data = Train)
+ 
+##
+```
