@@ -1,0 +1,96 @@
+---
+title: "Assignment 4 - 64060"
+author: "Marella (Martin) Murphy"
+date: "2023-10-29"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+This is my submission for Assignment 4, clustering financial data for Pharmaceutical companies.  The progression of my analysis starts with exploring and reading the data, loading the raw data and then creating a new data frame to work with. Once I have the data frame in place with labeled rows and columns, I then decided to use 2 clusters based on running two separate models for choosing the optimal number of clusters. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) #I am keeping all the details in the output file because it helps track the flow of the analysis better.
+```
+
+```{r}
+read.csv("Pharmaceuticals.csv") #testing that I have the correct directory set and RStudio can read the desired data set.
+```
+
+```{r}
+#In this code chunk I mirrored the code from the class Github example to have all the correct libraries. I then added two more libraries trying to get the Plot labels correct.
+
+library(tidyverse)
+library(factoextra)
+library(ISLR)
+library(dplyr)
+library(ggplot2)
+set.seed(123)
+
+summary("Pharmaceuticals.csv")
+
+Pharma.df<- read.csv("Pharmaceuticals.csv", header = TRUE , )
+summary(Pharma.df)
+df <- Pharma.df[,c(3,11)] 
+row.names(df) <- Pharma.df$Symbol 
+
+#I like symbol better as row name, I tried name first and it was too lengthy and looked messy.
+
+#I am choosing to focus on three measurements for the data analysis, Market capitalization and Net Profit Margin.
+
+summary(df)
+```
+
+```{r}
+df < - scale(df)
+distance <- get_dist(df)
+fviz_dist(distance)
+```
+
+```{r}
+df < - scale(df)
+
+fviz_nbclust(df, kmeans, method = "wss") 
+#I see here that the optimal number of clusters to use is either two or three, I am not certain so I'm going to look at the silhouette chart next.
+```
+
+```{r}
+fviz_nbclust(df, kmeans, method = "silhouette") 
+#This confirms that two clusters are optimal. 
+```
+
+```{r}
+k2 <- kmeans(df, centers = 2, nstart = 25) # k = 2, number of restarts = 25
+
+k2$centers #The two groups are distinguished by size of Market Cap, cluster 1 has an average market cap of $144B, and cluster 2 has an average market cap of only $30B.
+
+```
+
+```{r}
+k2$size # number of companies in each cluster
+k2$cluster  #list of which cluster each company was included in. I would like to learn to flip this table so it's all on one line!
+
+```
+
+```{r}
+# visualize the output. This visual makes it very clear that the 5 largest companies in terms of Market capitalization all have a net profit margin greater than $15B - I am assuming billions, I couldn't find $s presented in. This is where we begin to see a pattern with respect to variables 10-12. The top 5 market cap companies are all traded on the NYSE, and none are ranked sell.
+fviz_cluster(k2, data = df, main = "Cluster by Market Cap",
+               geom = "text", ggtheme = theme_minimal()) 
+```
+
+```{r}
+library(flexclust)
+set.seed(123)
+# Next I am going to try using the Manhattan distance
+k2 = kcca(df, k=2, kccaFamily("kmedians"))
+k2
+```
+
+```{r}
+# Next I am going to use the predict function.
+clusters_index <- predict(k2)
+dist(k2@centers)
+image(k2)
+points(df, col=clusters_index, pch=24, cex=0.6)
+```
