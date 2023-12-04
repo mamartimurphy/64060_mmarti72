@@ -1,0 +1,119 @@
+---
+title: "Assignment 5 - 64060"
+author: "Marella (Martin) Murphy"
+date: "2023-11-30"
+output: word_document
+---
+
+
+This is my submission for Assignment 5, I know this is late but I wanted to submit something with quality analysis and was not ready by the due date. I have spent many hours refining this code and answering the questions. I look forward to the feedback on what I have done both correctly and incorrectly. Thank you!
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``````{r}
+library(dplyr)
+library(cluster)
+library(caret)
+library(ISLR)
+library(flexclust)
+library(factoextra)
+library(tidyverse)
+read.csv("Cereals.csv")
+```
+```{r}
+Cereals.df <-read.csv("Cereals.csv", header = TRUE)
+summary(Cereals.df)
+```
+```{r}
+## Investigating which data is missing, but this is for columns and I need to view rows, so I moved to rowMeans next. Missing data was in the carbs, sugars, and potassium columns.
+colMeans(is.na(Cereals.df))
+```
+```{r}
+## Using rowMeans I can see that I need to remove Almond Delight, Cream of Wheat, and Quaker Oatmeal.
+rowMeans(is.na(Cereals.df))
+```
+
+```{r}
+## After some trial and error I decided to use the na.omit code to remove rows with missing data, I feel comfortable with this based on my review above that I now have 74 rows, omitting the 3 I expected from the original list of 77. I also need to run the clustering using numerical data only, so I need to remove columns 2 and 3 as they are categorical.
+
+Cereal.df <- na.omit(Cereals.df)
+df<- Cereal.df[,c(4:16)]
+summary(df)
+
+```
+
+```{r}
+## Now that I have cleaned up the data, I am ready to complete the assigned analysis. First I will apply hierarchical clustering using Euclidean distance, first I will normalize the data.
+
+d <- dist(df, method = "euclidean")
+d.norm <- dist(df[,c(1:13)], method = "euclidean")
+scale(d.norm)
+
+
+```
+```{r}
+## I will now plot the data set using complete linkage
+
+hc1 <- hclust(d, method = "complete")
+plot(hc1, cex = .05, hang = -1)
+print(hc1)
+```
+```{r}
+## Now I will look at the agnes functions with different linkages, and compare for the best linkage method. The "complete" method has the best linkage at 0.923.
+
+hc_single <- agnes(df, method = "single")
+hc_complete <- agnes(df, method = "complete")
+hc_average <- agnes(df, method = "average")
+
+print(hc_single$ac)
+print(hc_complete$ac)
+print(hc_average$ac)
+```
+```{r}
+pltree(hc_complete, cex = 0.3, hang = -1, main = "Dendogram of agnes")
+```
+
+```{r}
+## I am now going to look at the function diana and compare to agnes computed above.
+
+hc_diana <- diana(df)
+hc_diana$dc
+pltree(hc_diana, cex = .02, hang = -1, main = "Dendrogram of diana")
+
+```
+
+```{r}
+## After looking at all option, agnes function "Complete" is still the best and I would choose this to create the clusters. I will now partition the data, 70% train, 30% validation.
+set.seed(1)
+train.rows <- sample(rownames(df),dim(df)[1]*0.7)
+train.data <- df[train.rows, ]
+valid.rows <- setdiff(row.names(df), train.rows)
+valid.data <- df[valid.rows, ]
+summary(train.data)
+summary(valid.data)
+```
+
+```{r}
+## In this code chunk I am attempting to review the distance outputs for stability, in comparison to what I saw before in the complete linkage output. I cannot glean anything useful from this chart, I think I must be missing a crucial step. 
+get_dist(train.data, method = "euclidean", ) %>%
+fviz_dist()
+```
+```{r}
+##Lastly I am going to create a heatmap for the clusters from the training data and the complete linkage data, in that order. 
+heatmap(as.matrix(train.data), Colv = NA,  hclustfun = hclust, col=rev(paste("gray",1:99,sep = "")))
+heatmap(as.matrix(df), Colv = NA, hclustfun = hclust, col=rev(paste("gray",1:99,sep = "")))
+
+```
+
+
+```{r}
+## In conclusion, the school should offer the cereals in Cluster 3, because they have the highest rating, and low sodium, moderate vitamins, and are calorie dense. This is important for students that may not get 3 full meals at home. The last code line I was trying to write involved zooming in on the selected cluster, but I could not get the margins to work properly so I cannot see the actual cereals included in Cluster 3 (which is obviously an issue!)
+plot(hc1, cex = .03, hang = -1, )
+rect.hclust(hc_complete, k = 4, border = 1:4)
+
+```
+
+
