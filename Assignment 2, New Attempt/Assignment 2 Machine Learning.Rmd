@@ -1,0 +1,98 @@
+---
+title: "Assignment 2 - 2nd Attempt"
+author: "Marella Murphy"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) #I am keeping all the details in the output file because it helps track the flow of the analysis better.
+```
+
+```{r}
+library(dplyr)
+library(ISLR)
+library(caret)
+library(factoextra)
+library(FNN)
+UniversalBank <- read.csv("UniversalBank.csv")
+summary(UniversalBank)
+
+##remove the zip code and ID from the data, this will leave 12 columns to work with##
+
+UniversalBank <- UniversalBank[,-c(1,5)]
+summary(UniversalBank)
+
+##checking to see how many levels there are, the output indicates there are 3.
+factor(UniversalBank$Education)
+
+##create dummy variables for Education
+UniversalBank$Education <- as.factor(UniversalBank$Education)
+dummy_model <- dummyVars(~., data=UniversalBank)
+UniversalBank <- as.data.frame(predict(dummy_model, UniversalBank))
+```
+
+```{r}
+##I can view the summary of the data frame to confirm that the Education variable has been converted into 3 factors, I see the Education.1, 2, and 3 so this step is correct. 
+summary.data.frame(UniversalBank)
+```
+```{r}
+## Next I am going to attempt to split the data 60/40 for training data
+set.seed(1)
+train.rows <- sample(rownames(UniversalBank),dim(UniversalBank)[1]*0.6)
+train.data <- UniversalBank[train.rows, ]
+valid.rows <- setdiff(row.names(df), train.rows)
+valid.data <- UniversalBank[valid.rows, ]
+summary(train.data)
+summary(valid.data)
+TraVal_Data = UniversalBank
+
+##I am adding a chunk of code that I don't actually understand, but excluded from my first attempt. This was causing me an error when I did not include it originally. 
+train.norm.df <- train.data
+valid.norm.df <- valid.data
+traval.norm.df <- TraVal_Data
+
+## This next chunk I did apply without help, once I added the chunk above. 
+norm.values <- preProcess(UniversalBank[, c(1:5, 9)], method = c("center", "scale"))
+train.norm.df[, c(1:5, 9)] <- predict(norm.values, train.data[, c(1:5, 9)]) 
+valid.norm.df[, c(1:5, 9)] <- predict(norm.values, valid.data[, c(1:5, 9)])
+```
+```{r}
+## In this next section - I had to reference the answer sheet, I did NOT get this part correct the first attempt. But here is what I was able to duplicate using the example to create the new data frame. 
+
+new_customer <- data.frame(Age = 40, Experience = 10, Income = 84,Family = 2, CCAvg = 2, Education.1 = 0, Education.2 = 1, Education.3 = 0, Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online = 1, CreditCard = 1)
+
+test.norm.df <- new_customer
+test.norm.df[, c(1:5, 9)] <- predict(norm.values, new_customer[, c(1:5, 9)])
+```
+
+```{r}
+##I will now try to copmlete the knn (nearest neighbor) calculation. I'm using the "FNN" library from the class example for classifiers.
+## I got stuck again with this line of code, I kept getting an error that the dims differ, so for my 2nd attempt I referenced the answer sheet. This is when I reazlied I omitted the traval.norm data alltogether above, and I had to go back to add it. 
+### nn <- knn(train = train.norm.df[, 1:2], test = test.norm.df,
+  ###        cl = train.norm.df[, 3], k=3, prob = TRUE)
+
+knn.pred.new <- knn ( train = subset(traval.norm.df, select=-Personal.Loan),
+  test = test.norm.df, 
+  cl = traval.norm.df[, 10],
+  k = 1,
+  prob = TRUE )
+
+```
+
+```{r}
+##The next set of information in the answer sheet was not how I approached this to find the correct k, so I left my original work because I still reached k=3. I think we had not technically learned this yet in Assignment 2.
+ ## I receieved an error when knitting that this code cause the knit to stop scale.df <- scale(valid.data.df)
+      ## fviz_nbclust(valid.norm.df, kmeans, method = "silhouette") 
+```
+```{r}
+## I could not get the confusion matrix to print? I think I must have missed a step above. However, I do understand that the confusion matrix is meant to summarize the correct and incorrect classifications. So, perpahps I did no classify anything correct...? Taking note of this for the final to try to apply it correctly.
+ ##  confusionMatrix(knn.pred.new, train.norm.df[, 10], positive = "1")
+  ##  confusionMatrix(knn.pred.new, train.norm.df[, 10], positive = "1")$byClass["F1"]
+```
+
+```
+
