@@ -1,0 +1,162 @@
+---
+title: "Machine Learning File"
+author: "Marella (Martin) Murphy"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+## This is my submission for the final for Machine Learning, Fall 2023. I will complete the analysis using theories we learned about in all modules of the class to try to summarize everything I have learned in the course, to try to synthesize a large amount of difficult information! This class has by far been the most challenging of my MBA, and actually made me realize my strengths are not inherently in coding! I have spent too much time in excel performing data analytics. ##
+```
+## Exectutive Summary
+The findings of this report represent multiple different attempts to analyze over 600k lines of data. To begin, the data had to be understood, cleaned, and minimized for any meaningful output and analysis to be reached. Per the guidance provided, I started by omitting missing values, which reduced the data down to 76k observations. Then, a 2% sample was selected to proceed. I made many of my conclusions by reviewing the data in pudl, the interactive chart option was extremely useful. I started by learning that almost 100% of the contracts are type "C", which means they have terms greater than one year. The vast majority of fuel received was natural gas, from two major plant IDs of Barry and Beluga. The two largest suppliers were the Bay gas line and Marathon Oil Company.  I had hoped to understand gas consumption by geopraphic locatin, but was unable to find a data field representing this. 
+
+```{r}
+## Before I import the data and begin analysis, I will set-up a section to all all libraries I may want to use. As I add them throughout the data exploration and analysis, I will always put them up here at the top ##
+
+library(dplyr)
+library(ISLR)
+library(class)
+library(caret)
+library(factoextra)
+library(tidyverse)
+library(ggplot2)
+library("gmodels")
+
+```
+## Next I will bring in the dataset from PUDDL, and begin understanding what needs to be cleaned up. Right away in the global environment I see I have the complete data set with 663,572 obs. of 30 variables. I need to review some summary information, and understand what data is missing and should be excluded. 
+```{r}
+PowerGen.df <- read.csv("fuel_receipts_costs_eia923.csv")
+summary(PowerGen.df)
+dim(PowerGen.df)
+
+```
+
+```{r}
+t(t(names(PowerGen.df)))
+## rowMeans(is.na(PowerGen.df)) I had to omit this line of code becuase it generated over 550 pages in the word document.
+PowerGen.df <- na.omit(PowerGen.df)
+PowerGen.df = PowerGen.df[,-c(3,6,12)] #remove useless variables
+```
+
+```{r}
+## Sample and partition the data
+set.seed(3268)
+##s <- sample(row.names(PowerGen.df), 1600) #1,600 samples is approximately 2% of the data
+train.rows <- sample(rownames(PowerGen.df), dim(PowerGen.df)[1]*0.02) #2% for training, 98% for test
+train.data <- PowerGen.df[train.rows, ]
+valid.rows <- setdiff(rownames(PowerGen.df), train.rows)
+valid.data <- PowerGen.df[valid.rows, ]
+
+
+```
+##Now that I have set my sample data, and partitioned into training and validation data sets, I'll start working through some analysis. At this point I am still working to understand the data to formulate my questions.
+```{r}
+ggplot(data = train.data) + geom_point(mapping = aes(x = plant_id_eia, y = report_date)) #This plot is terrible, I will keep trying! Perhaps I need to normalize the data first? So I will try that next.
+```
+```{r}
+train.norm.df <- train.data
+valid.norm.df <- valid.data
+
+
+norm.values <- preProcess(train.data[, 16:20], method=c("center", "scale"))
+
+train.norm.df[, 16:20] <- predict(norm.values, train.data[, 16:20])
+valid.norm.df[, 16:20] <- predict(norm.values, valid.data[, 16:20])
+
+summary(train.norm.df)
+var(train.norm.df[, 16:20])
+
+```
+```{r}
+hist(train.norm.df$fuel_received_units, xlab = "Quanity of fuel received in tons, barrel, or Mcf")
+hist(train.norm.df$fuel_mmbtu_per_unit, xlab = "Heat Content in millions of Btus per physical unit.")
+hist(train.norm.df$fuel_cost_per_mmbtu, xlab = "Avg. fuel cost per mmBTU")
+```
+
+##With the normalized data, I will now apply k means.
+
+```{r}
+##This code chunk did now work, trying again.
+##  numeric_Power <- PowerGen.df[,c(16:20,27)]
+##  distance <- dist(numeric_Power)
+```
+```{r}
+t(t(names(train.norm.df)))
+numeric_Power <- train.norm.df[,c(13,17)]
+```
+```{r}
+df  <- scale(numeric_Power)
+k4 <- kmeans(df, centers = 4, nstart = 25)
+k4$centers
+k4$size
+fviz_cluster(k4, data = df) #visualize to see if this makes sense, it does not!
+```
+```{r}
+set.seed(3268)
+library(flexclust)
+k4 = kcca(df, k=4, kccaFamily("kmedians"))
+clusters_index <- predict(k4)
+dist(k4@centers)
+image(k4)
+points(df, col=clusters_index, pch=21, cex=0.6)
+```
+##I will now make determine what K should ideally be.
+```{r}
+library(tidyverse)
+library(factoextra)
+library(ISLR)
+set.seed(3268)
+
+df <- scale(df)
+fviz_nbclust(df, kmeans, method = "wss")
+```
+```{r}
+fviz_nbclust(df, kmeans, method = "silhouette")
+```
+##I Can easily see that 3 is the optimal number of clusters for this partitioned and scaled data. 
+```{r}
+set.seed(3268)
+library(flexclust)
+k3 = kcca(df, k=3, kccaFamily("kmedians"))
+clusters_index <- predict(k3)
+dist(k3@centers)
+image(k3)
+points(df, col=clusters_index, pch=21, cex=0.6)
+```
+```{r}
+k3 <- kmeans(df, centers = 3, nstart = 25)
+k3$centers
+k3$size
+fviz_cluster(k3, data = df)
+```
+```{r}
+library("dbscan")
+db <- dbscan::dbscan(numeric_Power, eps = 0.5, minPts = 5)
+print(db)
+```
+
+```{r}
+library(reshape2)
+melted.power <- melt(train.data, id.vars = c("fuel_received_units","fuel_cost_per_mmbtu"), measure.vars = "energy_source_code", value.name = "Type")
+pivot.power1 <- dcast(melted.power, fuel_received_units + fuel_cost_per_mmbtu ~ Type, fun.aggregate = length, value.var = "Type")
+pivot.power1
+```
+##I Want to attempt the extra credit for multiple-linear regression to predict fuel cost per mmbtu.I will try to use the example in our text book, page 159, to apply this model.
+```{r}
+PowerGen.df <- PowerGen.df[1:5000, ] #use first 5,000 rows
+selected.var <- c(2:3,6,8,13:17)
+set.seed(499)
+train.index <-sample(c(1:5000), 1000)
+trainregression.df <- PowerGen.df[train.index, selected.var]
+validregression.df <- PowerGen.df[-train.index, selected.var]
+## I could not get this lm chunk to work! I really thought I had it. I had to emit as comment only so that I could knit my flie.
+## power.lm <- lm(fuel_cost_per_mmbtu ~., data = trainregression.df)
+##  options(scipen = 999)
+##    summary(power.lm)
+```
+
